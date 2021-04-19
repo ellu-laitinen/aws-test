@@ -13,27 +13,38 @@ const initialFormState = { name: "", description: "" };
 function App() {
   const [notes, setNotes] = useState([]);
   const [formData, setFormData] = useState(initialFormState);
+  const [nextToken, setNextToken] = useState(undefined)
+  const [nextNextToken, setNextNextToken] = useState()
+  const [prevToken, setPrevToken] =useState([])
+  const limit=5 
+
+/*   useEffect(() => {
+    fetchNotes();
+  }, []); */
 
   useEffect(() => {
-    fetchNotes();
-  }, []);
+    async function fetchNotes() {
+      const apiData = await API.graphql({ query: listNotes, variables: {nextToken, limit} })
+      setNextNextToken(apiData.data.listNotes.nextToken)
+    
+      const notesFromAPI = apiData.data.listNotes.items;
+      console.log(notesFromAPI);
+      await Promise.all(
+        notesFromAPI.map(async (note) => {
+          console.log(note);
+          if (note.image) {
+            const image = await Storage.get(note.image);
+            note.image = image;
+          }
+          return note;
+        })
+      );
+     setNotes(apiData.data.listNotes.items);
+    }
+    fetchNotes()
+    
+  }, [nextToken])
 
-  async function fetchNotes() {
-    const apiData = await API.graphql({ query: listNotes });
-    const notesFromAPI = apiData.data.listNotes.items;
-    console.log(notesFromAPI);
-    await Promise.all(
-      notesFromAPI.map(async (note) => {
-        console.log(note);
-        if (note.image) {
-          const image = await Storage.get(note.image);
-          note.image = image;
-        }
-        return note;
-      })
-    );
-    setNotes(apiData.data.listNotes.items);
-  }
 
   async function createNote() {
     if (!formData.name || !formData.description) return;
@@ -64,12 +75,27 @@ function App() {
     const file = e.target.files[0];
     setFormData({ ...formData, image: file.name });
     await Storage.put(file.name, file);
-    fetchNotes();
+   // fetchNotes();
+  }
+
+  const getNext=() => {
+    setPrevToken((prev) => [...prev, nextToken])
+    console.log("get next")
+    setNextToken(nextNextToken)
+    setNextNextToken(null)
+  }
+  const getPrev = () => {
+    console.log("get prev")
+    setNextToken(prevToken.pop())
+    setPrevToken([...prevToken])
+    setNextNextToken(null)
   }
 
   return (
     <div className="App">
       <h1>My Notes App</h1>
+      <button onClick={getNext}>next 5</button>
+      <button onClick={getPrev}>previous 5</button>
       <input
         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
         placeholder="Note name"
