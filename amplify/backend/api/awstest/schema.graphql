@@ -1,6 +1,19 @@
-type Note @model {
+type Department @model {
   id: ID!
   name: String!
-  description: String
-  image: String
+  manager: Employee @connection
+  employees: [Employee] @connection(name: "DepartmentEmployees")
+}
+
+type Employee @model {
+  id: ID!
+  name: String!
+  age: Int
+  info: Info @connection
+  department: Department @connection(name: "DepartmentEmployees")
+}
+
+type Info @model {
+  id: ID!
+  text: String
 }
